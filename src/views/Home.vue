@@ -5,28 +5,76 @@
       <p>Selecciona un catálogo para ver los productos</p>
     </header>
 
-    <main class="home-grid">
+    <p v-if="loading" class="home-status">Cargando catálogos…</p>
+
+    <div v-else-if="error" class="home-error">
+      <p>{{ error }}</p>
+      <button type="button" @click="cargarCatalogos">Reintentar</button>
+    </div>
+
+    <main v-else-if="catalogos.length" class="home-grid">
       <router-link
-        v-for="cat in CATALOGOS"
-        :key="cat.id"
-        :to="'/' + cat.id"
+        v-for="cat in catalogos"
+        :key="cat.slug"
+        :to="cat.publicPath || '/' + cat.slug"
         class="home-card"
       >
-        <span class="home-card-icon">{{ cat.icon }}</span>
-        <span class="home-card-label">{{ cat.label }}</span>
+        <span class="home-card-icon">📦</span>
+        <span class="home-card-label">
+          {{ cat.siteName || cat.slug }}
+        </span>
       </router-link>
     </main>
+
+    <p v-else class="home-status">
+      No hay catálogos publicados.
+    </p>
   </div>
 </template>
 
 <script setup>
-import { CATALOGOS } from '../main.js'
+import { onMounted, ref } from 'vue'
+import { API_URL } from '../main.js'
+
+const catalogos = ref([])
+const loading = ref(true)
+const error = ref('')
+
+async function cargarCatalogos() {
+  loading.value = true
+  error.value = ''
+
+  try {
+    const response = await fetch(API_URL)
+
+    if (!response.ok) {
+      throw new Error(`Error HTTP ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    if (data.error) {
+      throw new Error(data.error)
+    }
+
+    catalogos.value = Array.isArray(data.catalogos)
+      ? data.catalogos.filter(cat => cat && cat.slug)
+      : []
+  } catch (err) {
+    console.error('[Home]', err)
+    error.value = 'No se pudieron cargar los catálogos.'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(cargarCatalogos)
 </script>
 
 <style scoped>
 .home {
   min-height: 100vh;
-  background: #F7F4EF;
+  background: #f7f4ef;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -34,27 +82,34 @@ import { CATALOGOS } from '../main.js'
   padding: 40px 20px;
   font-family: 'DM Sans', sans-serif;
 }
+
 .home-header {
   text-align: center;
   margin-bottom: 40px;
 }
+
 .home-header h1 {
   font-size: 32px;
   font-weight: 700;
-  color: #0F0E0C;
-  margin-bottom: 8px;
+  color: #0f0e0c;
+  margin: 0 0 8px;
 }
-.home-header p {
+
+.home-header p,
+.home-status {
   font-size: 16px;
-  color: rgba(58,56,50,.55);
+  color: rgba(58, 56, 50, 0.65);
+  text-align: center;
 }
+
 .home-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   justify-content: center;
-  max-width: 600px;
+  max-width: 760px;
 }
+
 .home-card {
   display: flex;
   flex-direction: column;
@@ -63,20 +118,46 @@ import { CATALOGOS } from '../main.js'
   padding: 32px 40px;
   background: #fff;
   border-radius: 20px;
-  border: 1px solid rgba(58,56,50,.08);
-  box-shadow: 0 2px 16px rgba(15,14,12,.07);
+  border: 1px solid rgba(58, 56, 50, 0.08);
+  box-shadow: 0 2px 16px rgba(15, 14, 12, 0.07);
   text-decoration: none;
-  transition: transform .2s, box-shadow .2s;
+  transition: transform 0.2s, box-shadow 0.2s;
   min-width: 140px;
 }
+
 .home-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 32px rgba(15,14,12,.12);
+  box-shadow: 0 8px 32px rgba(15, 14, 12, 0.12);
 }
-.home-card-icon { font-size: 48px; }
+
+.home-card-icon {
+  font-size: 48px;
+}
+
 .home-card-label {
   font-size: 15px;
   font-weight: 600;
-  color: #0F0E0C;
+  color: #0f0e0c;
+  text-align: center;
+}
+
+.home-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: #3a3832;
+  text-align: center;
+}
+
+.home-error button {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 22px;
+  background: #007aff;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
 }
 </style>
