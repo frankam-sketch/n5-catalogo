@@ -65,30 +65,77 @@ const {
 // ── Cargar el componente de tema dinámicamente ────────────────────────────
 const componenteTema = ref(null)
 
+// Lee el nombre del tema configurado en Google Sheets.
+// Si todavía no existe un tema configurado, usa ios-light.
 const temaActual = computed(() => {
-  // Lee el tema desde config (viene de la hoja CONFIG del Sheets)
   return config.value?.theme || 'ios-light'
 })
 
-watch(temaActual, async (nombre) => {
-  const loader = TEMAS_DISPONIBLES[nombre]
-  if (!loader) {
-    componenteTema.value = null
-    return
-  }
-  const mod = await loader()
-  componenteTema.value = mod.default
-}, { immediate: false })
+// Busca, valida y carga el archivo Vue correspondiente al tema.
+async function cargarTema(nombre) {
+  const nombreSolicitado = nombre || 'ios-light'
 
-// Cuando termina de cargar, aplicar el tema
-watch(loading, (val) => {
-  if (!val && config.value?.theme) {
-    const loader = TEMAS_DISPONIBLES[config.value.theme]
-    if (loader) {
-      loader().then(mod => { componenteTema.value = mod.default })
+  // Si el nombre no existe en main.js, utiliza ios-light.
+  const nombreSeguro = TEMAS_DISPONIBLES[nombreSolicitado]
+    ? nombreSolicitado
+    : 'ios-light'
+
+  if (nombreSeguro !== nombreSolicitado) {
+    console.warn(
+      `[CatalogView] El tema "${nombreSolicitado}" no está registrado. Se usará "ios-light".`
+    )
+  }
+
+  try {
+    const loader = TEMAS_DISPONIBLES[nombreSeguro]
+    const mod = await loader()
+
+    componenteTema.value = mod.default
+  } catch (errorTema) {
+    console.error(
+      `[CatalogView] No se pudo cargar el tema "${nombreSeguro}".`,
+      errorTema
+    )
+
+    // Si el tema que falló no era ios-light,
+    // intenta cargar ios-light como último respaldo.
+    if (nombreSeguro !== 'ios-light') {
+      try {
+        const fallback = await TEMAS_DISPONIBLES['ios-light']()
+        componenteTema.value = fallback.default
+      } catch (errorFallback) {
+        console.error(
+          '[CatalogView] Tampoco se pudo cargar el tema de respaldo "ios-light".',
+          errorFallback
+        )
+
+        componenteTema.value = null
+      }
+    } else {
+      componenteTema.value = null
     }
   }
+}
+
+// Si cambia el nombre del tema, carga el nuevo diseño.
+// Esto sirve cuando actualizas el valor "theme" desde Google Sheets.
+watch(temaActual, (nombre) => {
+  if (!loading.value) {
+    cargarTema(nombre)
+  }
 })
+
+// Espera a que termine de cargar la información del catálogo.
+// Después carga el tema correspondiente.
+watch(
+  loading,
+  (estaCargando) => {
+    if (!estaCargando) {
+      cargarTema(temaActual.value)
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
