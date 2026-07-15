@@ -13,7 +13,14 @@ export const API_URL =
 export const TEMAS_DISPONIBLES = {
   'ios-light': () => import('./themes/IosLight.vue'),
   'dark-bold': () => import('./themes/DarkBold.vue'),
-  minimal: () => import('./themes/Minimal.vue'),
+  'minimal': () => import('./themes/Minimal.vue'),
+
+  // Nuevos temas profesionales
+  'n5-studio': () => import('./themes/N5Studio.vue'),
+  'editorial': () => import('./themes/Editorial.vue'),
+  'industrial': () => import('./themes/Industrial.vue'),
+  'mercado-calido': () => import('./themes/MercadoCalido.vue'),
+  'tech-grid': () => import('./themes/TechGrid.vue'),
 }
 
 const routes = [
