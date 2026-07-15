@@ -1,9 +1,9 @@
 <template>
-  <router-view />
+  <router-view v-slot="{ Component, route }">
+    <component :is="Component" :key="route.fullPath" />
+  </router-view>
 </template>
 
 <script setup>
-// App.vue es el punto de entrada de Vue.
-// Solo contiene el router-view que muestra la página activa.
-// No necesitas editar este archivo.
+// La clave por ruta fuerza una carga limpia al cambiar de un catálogo a otro.
 </script>
